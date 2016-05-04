@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: znc
+  labels:
+    name: znc
+spec:
+  replicas: 1
+  selector:
+    name: znc
+  template:
+    metadata:
+      labels:
+        name: znc
+    spec:
+      containers:
+      - name: znc
+        image: brujoand/rpi-znc
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8086
+          hostPort: 8086
+          name: http-znc
+        volumeMounts:
+        - name: nfs-data
+          mountPath: /data
+        - name: nfs-config
+          mountPath: /config
+      volumes:
+        - name: nfs-data
+          persistentVolumeClaim:
+            claimName: nfs-data
+        - name: nfs-config
+          persistentVolumeClaim:
+            claimName: nfs-config

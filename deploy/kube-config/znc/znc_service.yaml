@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: znc
+  labels:
+    name: znc
+  annotations:
+    virtual_host: "znc.brujordet.no"
+    virtual_port: "8086"
+spec:
+  ports:
+    - port: 8086
+  selector:
+    name: znc
+  type: ClusterIP

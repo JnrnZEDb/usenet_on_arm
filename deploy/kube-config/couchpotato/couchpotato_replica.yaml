@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: couchpotato
+  labels:
+    name: couchpotato
+spec:
+  replicas: 1
+  selector:
+    name: couchpotato
+  template:
+    metadata:
+      labels:
+        name: couchpotato
+    spec:
+      containers:
+      - name: couchpotato
+        image: brujoand/rpi-couchpotato
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5050
+          hostPort: 5050
+          name: http-couch
+        volumeMounts:
+        - name: nfs-data
+          mountPath: /data
+        - name: nfs-config
+          mountPath: /config
+      volumes:
+        - name: nfs-data
+          persistentVolumeClaim:
+            claimName: nfs-data
+        - name: nfs-config
+          persistentVolumeClaim:
+            claimName: nfs-config

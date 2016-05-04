@@ -1,0 +1,20 @@
+#! /usr/bin/env bash
+
+# Fail hard and fast
+set -eo pipefail
+
+ETCD_PROTOCOL=${ETCD_PROTOCOL:-"http"}
+ETCD_IP=${ETCD_IP:-"127.0.0.1"}
+ETCD_PORT=${ETCD_PORT:-"4001"}
+etcd_node="${ETCD_PROTOCOL}://${ETCD_IP}:${ETCD_PORT}"
+
+
+echo "[nginx] booting container. ETCD: $etcd_node"
+
+nginx
+
+# Run confd in the background to watch the upstream servers
+confd -interval 10 -backend etcd -node "$etcd_node" -config-file /etc/confd/conf.d/nginx.toml &
+echo "[nginx] confd is listening for changes on etcd..."
+
+tail -f /var/log/nginx/*.log

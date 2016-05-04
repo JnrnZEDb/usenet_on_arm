@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nzbget
+  labels:
+    name: nzbget
+  annotations: 
+    virtual_host: "nzbget.brujordet.no"
+    virtual_port: "6789"
+spec:
+  ports:
+    - port: 6789
+  selector:
+    name: nzbget
+  type: ClusterIP

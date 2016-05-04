@@ -1,0 +1,97 @@
+#! /usr/bin/env bash
+
+WORK_DIR=/opt
+APK_FLAGS=()
+DO_CLEAN=0
+
+function print_usage() {
+  echo -e "\nUsage: $0 <flags> <type> <dependencies>"
+  echo -e "Flags:"
+  echo -e "\t-b\t\t Build: Install dependencies into /build or as virtual dependencies, except for pip"
+  echo -e "\t-c\t\t Clean: Removes tmp directories, /build and virtual dependencies"
+  echo -e "Types: {apk|git|pip|tar}"
+  exit 1
+}
+
+function enable_build_settings() {
+  WORK_DIR=/build
+  APK_FLAGS=('--virtual' 'build_deps')
+}
+
+function clean_up() {
+  apk del "build_deps"
+  rm -rf /var/cache/apk/*
+  rm -rf /build/*
+  rm -rf /tmp/*
+}
+
+function install_apks() {
+  apk -U add "${APK_FLAGS[@]}" "$@"
+}
+
+function install_pips(){
+  apk -U add py-pip && pip install --upgrade pip
+  for p in "$@"; do
+    pip install "$p"
+  done
+}
+
+function install_gits(){
+  (enable_build_settings 
+  install_apks git)
+  (cd "$WORK_DIR" || return 1 
+  for g in "$@"; do
+      git clone --depth 1 -b master --single-branch "$g"
+  done
+  )
+}
+
+function install_tarballs(){
+  echo "TODO: Add tarball support"
+}
+
+[[ -z "$1" ]] && print_usage
+
+while getopts ":bc" opt; do
+  case $opt in
+    b)
+      enable_build_settings
+      ;;
+    c)
+      DO_CLEAN=1
+      ;;
+    \?)
+      print_usage
+      ;;
+  esac
+done
+
+shift $((OPTIND-1))
+
+if [[ -n "$1" ]]; then
+  case $1 in
+    pip)
+      shift
+      install_pips "$@"
+      ;;
+    git)
+      shift
+      install_gits "$@"
+      ;;
+    tar)
+      shift
+      install_tarballs "$@"
+      ;;
+    apk)
+      shift
+      install_apks "$@"
+      ;;
+    *)
+      print_usage
+      ;;
+  esac
+fi
+
+[[ $DO_CLEAN -eq 1 ]] && clean_up
+
+exit 0

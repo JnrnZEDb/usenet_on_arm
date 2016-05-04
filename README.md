@@ -1,2 +1,7 @@
 # usenet_on_arm
-Just my usenet stuff running in docker containers on a raspberry pi powered kuberenets cluster
+
+1. Get some RPI's
+2. Install kubernetes --> https://github.com/luxas/kubernetes-on-arm
+3. Deploy
+
+Aaaand profit.

@@ -1,0 +1,64 @@
+#! /usr/bin/env bash
+
+# shellcheck disable=SC1091
+. ~/.bashrc
+
+umask 002 # fight for our rights!
+
+if [[ -z "$SERVICE" ]]; then
+  echo "No service defined, maybe some bash for you?"
+  exec "bash"
+  exit $?
+fi
+
+data_user=$(stat -c "%u" /data)
+data_group=$(stat -c "%g" /data)
+
+config_user=$(stat -c "%u" /config)
+config_group=$(stat -c "%g" /config)
+
+user_name="$SERVICE"
+group_name="$SERVICE"
+user_id=${USER_ID:-$config_user}
+group_id=${GROUP_ID:-$config_group}
+
+if [[ "${config_user}:${config_group}" != "${data_user}:${data_group}" ]]; then
+  echo
+  echo "WARN: /config is owned by ${config_user}:${config_group}, but /data is owned by ${data_user}:${data_group}"
+  echo "WARN: This could be a problem. We will run as ${config_user}:${config_group}"
+  echo "WARN: Override this by setting the desired uid/gid with the USER_ID/GROUP_ID variable"
+fi
+
+
+# For service in /opt/ git pull && apk update && apk ugrade
+
+if [[ $user_id -ne 0 ]]; then
+  if ! addgroup -g "$group_id" "$group_name" 2>/dev/null; then
+    echo "Group with gid $group_id already exists, using it for our user"
+    group_name=$(grep ":20:" /etc/group | cut -d ':' -f 1)
+  fi
+  
+  if ! adduser -s /bin/bash -G "$group_name" -u "$user_id" -D "$user_name" 2>/dev/null; then
+    echo "User $user_name already exist, altering it's user id to $user_id"
+    usermod -u "$user_id" "$user_name"
+    addgroup "$user_name" "$group_name"
+  fi
+
+  if [[ -d "/home/$user_name" ]]; then
+    echo "Setting up bashrc and /opt permissions for user $user_name"
+    cp /root/.bashrc /home/"$user_name"/.bashrc
+    chown "$user_name" /home/"$user_name"/.bashrc
+    chown "${user_id}:${group_id}" -R /opt
+  fi
+
+  echo "Sleeping for 1 second to avoid 'text file busy'" && sleep 1
+
+  echo "Running as user $user_name with uid: $user_id"
+  echo "Running command: '$*'"
+  exec gosu "$user_name" "$@"
+else
+  echo "Running as user ROOT with uid: $user_id"
+  echo "Running command: '$*'"
+  exec "$@"
+fi
+
